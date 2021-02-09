@@ -19,7 +19,7 @@
     },
     "require": {
         "php": ">=7.3",
-        "multiplex/multiplex": "1.0.x-dev"
+        "multiplex/multiplex": "^1.0"
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^2.14",
