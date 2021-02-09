@@ -1,20 +1,22 @@
 name: PHPUnit
 
-on: [push, pull_request]
+on: [ push, pull_request ]
 
 env:
-  SWOOLE_VERSION: '4.6.2'
   SWOW_VERSION: 'develop'
 
 jobs:
   ci:
-    name: Test PHP ${{ matrix.php-version }} on ${{ matrix.engine }}
+    name: Test PHP ${{ matrix.php-version }} on Swoole ${{ matrix.swoole-version }}
     runs-on: "${{ matrix.os }}"
+    env:
+      SWOOLE_VERSION: ${{ matrix.swoole-version }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        php-version: ['7.3', '7.4']
-        engine: ['none', 'swoole', 'swow']
+        os: [ ubuntu-latest ]
+        php-version: [ '7.3', '7.4' ]
+        engine: [ 'swoole' ]
+        swoole-version: [ '4.5.11', '4.6.2' ]
       max-parallel: 5
     steps:
       - name: Checkout
