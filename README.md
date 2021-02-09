@@ -1,5 +1,5 @@
-# component-creater
+# Socket for Multiplexing Connection
 
 ```
-composer create-project hyperf/component-creater
+composer require multiplex/socket
 ```
