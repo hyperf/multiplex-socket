@@ -12,11 +12,13 @@ declare(strict_types=1);
 namespace Multiplex\Socket;
 
 use Hyperf\Utils\Collection;
+use Multiplex\Constract\SerializerInterface;
 use Multiplex\Constract\ServerInterface;
 use Multiplex\Exception\ServerBindFailedException;
 use Multiplex\Exception\ServerStartFailedException;
 use Multiplex\Packer;
 use Multiplex\Packet;
+use Multiplex\Serializer\StringSerializer;
 use Swoole\Coroutine;
 use Swoole\Coroutine\Server as SwooleServer;
 use Swoole\Coroutine\Server\Connection;
@@ -43,9 +45,15 @@ class Server implements ServerInterface
      */
     protected $handler;
 
-    public function __construct()
+    /**
+     * @var SerializerInterface
+     */
+    protected $serializer;
+
+    public function __construct(?SerializerInterface $serializer = null)
     {
         $this->packer = new Packer();
+        $this->serializer = $serializer ?? new StringSerializer();
     }
 
     public function bind(string $name, int $port, Collection $config)
@@ -70,6 +78,11 @@ class Server implements ServerInterface
         return $this;
     }
 
+    public function getSerializer(): SerializerInterface
+    {
+        return $this->serializer;
+    }
+
     public function start(): void
     {
         if (! $this->server instanceof SwooleServer) {
@@ -85,8 +98,13 @@ class Server implements ServerInterface
                 Coroutine::create(function () use ($ret, $conn) {
                     $packet = $this->packer->unpack($ret);
                     $id = $packet->getId();
-                    $result = $this->handler->__invoke($packet);
-                    $conn->send($this->packer->pack(new Packet($id, (string) $result)));
+                    try {
+                        $result = $this->handler->__invoke($packet, $this->getSerializer());
+                    } catch (\Throwable $exception) {
+                        $result = $exception;
+                    } finally {
+                        $conn->send($this->packer->pack(new Packet($id, $this->getSerializer()->serialize($result))));
+                    }
                 });
             }
         });

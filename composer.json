@@ -45,11 +45,5 @@
         "branch-alias": {
             "dev-main": "1.0-dev"
         }
-    },
-    "repositories": {
-        "multiplex": {
-            "type": "path",
-            "url": "../multiplex"
-        }
     }
 }
