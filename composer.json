@@ -19,7 +19,7 @@
     },
     "require": {
         "php": ">=7.3",
-        "multiplex/multiplex": "*"
+        "multiplex/multiplex": "1.0.x-dev"
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^2.14",
@@ -42,8 +42,8 @@
         "cs-fix": "php-cs-fixer fix $1"
     },
     "extra": {
-        "hyperf": {
-            "config": "Multiplex\\Socket\\ConfigProvider"
+        "branch-alias": {
+            "dev-main": "1.0-dev"
         }
     },
     "repositories": {
