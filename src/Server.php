@@ -12,6 +12,8 @@ declare(strict_types=1);
 namespace Multiplex\Socket;
 
 use Hyperf\Utils\Collection;
+use Multiplex\Constract\HasSerializerInterface;
+use Multiplex\Constract\PackerInterface;
 use Multiplex\Constract\SerializerInterface;
 use Multiplex\Constract\ServerInterface;
 use Multiplex\Exception\ServerBindFailedException;
@@ -23,7 +25,7 @@ use Swoole\Coroutine;
 use Swoole\Coroutine\Server as SwooleServer;
 use Swoole\Coroutine\Server\Connection;
 
-class Server implements ServerInterface
+class Server implements ServerInterface, HasSerializerInterface
 {
     /**
      * @var Packer
@@ -50,9 +52,9 @@ class Server implements ServerInterface
      */
     protected $serializer;
 
-    public function __construct(?SerializerInterface $serializer = null)
+    public function __construct(?SerializerInterface $serializer = null, ?PackerInterface $packer = null)
     {
-        $this->packer = new Packer();
+        $this->packer = $packer ?? new Packer();
         $this->serializer = $serializer ?? new StringSerializer();
     }
 
