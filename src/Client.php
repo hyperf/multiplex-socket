@@ -63,6 +63,7 @@ class Client implements ClientInterface, HasSerializerInterface
 
     public function send($data): int
     {
+        return 1;
     }
 
     public function recv(int $id)
@@ -77,11 +78,11 @@ class Client implements ClientInterface, HasSerializerInterface
 
     public function getChannelMapper(): ChannelMapper
     {
-        // TODO: Implement getChannelMapper() method.
+        return new ChannelMapper();
     }
 
     public function getWaiter(): Channel
     {
-        // TODO: Implement getWaiter() method.
+        return new Channel();
     }
 }
