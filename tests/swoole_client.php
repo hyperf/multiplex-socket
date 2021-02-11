@@ -1,5 +1,14 @@
 <?php
 
+declare(strict_types=1);
+/**
+ * This file is part of Hyperf.
+ *
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
+ */
 require_once __DIR__ . '/../vendor/autoload.php';
 
 $max = 10000;
@@ -8,13 +17,13 @@ run(function () use ($max) {
     $time = microtime(true);
     $client = new \Multiplex\Socket\Client('127.0.0.1', 9601);
     $channel = new \Hyperf\Engine\Channel($max);
-    for ($i = 0; $i < $max; $i++) {
+    for ($i = 0; $i < $max; ++$i) {
         go(function () use ($client, $channel) {
             $channel->push($client->request('World.'));
         });
     }
 
-    for ($i = 0; $i < $max; $i++) {
+    for ($i = 0; $i < $max; ++$i) {
         $channel->pop();
     }
 
@@ -41,7 +50,7 @@ run(function () use ($max) {
     $time = microtime(true);
     $channel = new \Hyperf\Engine\Channel($max);
     $packer = new \Multiplex\Packer();
-    for ($i = 0; $i < $max; $i++) {
+    for ($i = 0; $i < $max; ++$i) {
         go(function () use ($pool, $channel, $packer) {
             try {
                 /** @var \Swoole\Coroutine\Client $client */
@@ -57,7 +66,7 @@ run(function () use ($max) {
         });
     }
 
-    for ($i = 0; $i < $max; $i++) {
+    for ($i = 0; $i < $max; ++$i) {
         $channel->pop();
     }
 
