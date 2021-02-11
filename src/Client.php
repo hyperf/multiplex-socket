@@ -88,7 +88,7 @@ class Client implements ClientInterface, HasSerializerInterface
         $this->config = new Collection([
             'package_max_length' => 1024 * 1024 * 2,
             'recv_timeout' => 10,
-            'connect_timeout' => 2,
+            'connect_timeout' => 0.5,
         ]);
     }
 

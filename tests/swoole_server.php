@@ -18,6 +18,7 @@ run(function () {
     $server = new Server();
     $config = collect([]);
     $server->bind('0.0.0.0', 9601, $config)->handle(static function (Packet $packet) {
+        // usleep(10 * 1000);
         return 'Hello ' . $packet->getBody();
     })->start();
 });
