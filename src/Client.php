@@ -111,14 +111,19 @@ class Client implements ClientInterface, HasSerializerInterface
 
         $this->getChannelManager()->get($id = $this->generator->generate(), true);
 
-        $payload = $this->packer->pack(
-            new Packet(
-                $id,
-                $this->getSerializer()->serialize($data)
-            )
-        );
+        try {
+            $payload = $this->packer->pack(
+                new Packet(
+                    $id,
+                    $this->getSerializer()->serialize($data)
+                )
+            );
 
-        $this->chan->push($payload);
+            $this->chan->push($payload);
+        } catch (\Throwable $exception) {
+            is_int($id) && $this->getChannelManager()->close($id);
+            throw $exception;
+        }
 
         return $id;
     }
