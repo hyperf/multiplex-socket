@@ -12,15 +12,23 @@ declare(strict_types=1);
 namespace Multiplex\Socket;
 
 use Hyperf\Engine\Channel;
-use Multiplex\ChannelMapper;
+use Hyperf\Utils\Collection;
+use Hyperf\Utils\Coroutine;
+use Multiplex\ChannelManager;
 use Multiplex\Constract\ClientInterface;
 use Multiplex\Constract\HasSerializerInterface;
 use Multiplex\Constract\IdGeneratorInterface;
 use Multiplex\Constract\PackerInterface;
 use Multiplex\Constract\SerializerInterface;
+use Multiplex\Exception\ChannelClosedException;
+use Multiplex\Exception\ChannelLosedException;
+use Multiplex\Exception\ClientConnectFailedException;
+use Multiplex\Exception\RecvTimeoutException;
 use Multiplex\IdGenerator;
 use Multiplex\Packer;
+use Multiplex\Packet;
 use Multiplex\Serializer\StringSerializer;
+use Swoole\Coroutine\Client as SwooleClient;
 
 class Client implements ClientInterface, HasSerializerInterface
 {
@@ -49,26 +57,88 @@ class Client implements ClientInterface, HasSerializerInterface
      */
     protected $generator;
 
-    protected $waiter;
+    /**
+     * @var ?Channel
+     */
+    protected $chan;
 
-    public function __construct(string $name, int $port, ?IdGeneratorInterface $generator, ?SerializerInterface $serializer = null, ?PackerInterface $packer = null)
+    /**
+     * @var SwooleClient
+     */
+    protected $client;
+
+    /**
+     * @var Collection
+     */
+    protected $config;
+
+    public function __construct(string $name, int $port, ?IdGeneratorInterface $generator = null, ?SerializerInterface $serializer = null, ?PackerInterface $packer = null)
     {
         $this->name = $name;
         $this->port = $port;
         $this->packer = $packer ?? new Packer();
         $this->generator = $generator ?? new IdGenerator();
         $this->serializer = $serializer ?? new StringSerializer();
-        $this->waiter = new Channel();
+        $this->config = new Collection([
+            'package_max_length' => 1024 * 1024 * 2,
+            'recv_timeout' => 10,
+            'connect_timeout' => 2,
+        ]);
+    }
+
+    /**
+     * @return $this
+     */
+    public function set(array $settings)
+    {
+        $this->config = new Collection($settings);
+    }
+
+    public function request($data)
+    {
+        return $this->recv($this->send($data));
     }
 
     public function send($data): int
     {
-        return 1;
+        $this->loop();
+
+        $this->getChannelManager()->get($id = $this->generator->generate(), true);
+
+        $payload = $this->packer->pack(
+            new Packet(
+                $id,
+                $this->getSerializer()->serialize($data)
+            )
+        );
+
+        $this->chan->push($payload);
+
+        return $id;
     }
 
     public function recv(int $id)
     {
-        // TODO: Implement recv() method.
+        $manager = $this->getChannelManager();
+        $chan = $manager->get($id);
+        if ($chan === null) {
+            throw new ChannelLosedException();
+        }
+
+        try {
+            $data = $chan->pop($this->config->get('recv_timeout', 10));
+            if ($chan->isTimeout()) {
+                throw new RecvTimeoutException();
+            }
+
+            if ($chan->isClosing()) {
+                throw new ChannelClosedException();
+            }
+        } finally {
+            $manager->close($id);
+        }
+
+        return $data;
     }
 
     public function getSerializer(): SerializerInterface
@@ -76,13 +146,84 @@ class Client implements ClientInterface, HasSerializerInterface
         return $this->serializer;
     }
 
-    public function getChannelMapper(): ChannelMapper
+    public function getChannelManager(): ChannelManager
     {
-        return new ChannelMapper();
+        return new ChannelManager();
     }
 
-    public function getWaiter(): Channel
+    protected function makeClient(): SwooleClient
     {
-        return new Channel();
+        $client = new SwooleClient(SWOOLE_SOCK_TCP);
+        $client->set([
+            'open_length_check' => true,
+            'package_length_type' => 'N',
+            'package_length_offset' => 0,
+            'package_body_offset' => 4,
+            'package_max_length' => $this->config->get('package_max_length', 1024 * 1024 * 2),
+        ]);
+        $ret = $client->connect($this->name, $this->port, $this->config->get('connect_timeout', 0.5));
+        if ($ret === false) {
+            throw new ClientConnectFailedException($client->errMsg, $client->errCode);
+        }
+        return $client;
+    }
+
+    protected function loop(): void
+    {
+        if ($this->chan !== null && ! $this->chan->isClosing()) {
+            return;
+        }
+        $this->chan = $this->getChannelManager()->make(65535);
+        $this->client = $this->makeClient();
+        Coroutine::create(function () {
+            try {
+                $chan = $this->chan;
+                $client = $this->client;
+                while (true) {
+                    $data = $client->recv();
+                    if (! $client->isConnected()) {
+                        break;
+                    }
+                    if ($chan->isClosing()) {
+                        break;
+                    }
+
+                    $packet = $this->packer->unpack($data);
+                    if ($channel = $this->getChannelManager()->get($packet->getId())) {
+                        $channel->push(
+                            $this->serializer->unserialize($packet->getBody())
+                        );
+                    }
+                }
+            } finally {
+                $chan->close();
+                $client->close();
+            }
+        });
+
+        Coroutine::create(function () {
+            try {
+                $chan = $this->chan;
+                $client = $this->client;
+                while (true) {
+                    $data = $chan->pop();
+                    if ($chan->isClosing()) {
+                        break;
+                    }
+                    if (! $client->isConnected()) {
+                        break;
+                    }
+
+                    if (empty($data)) {
+                        continue;
+                    }
+
+                    $client->send($data);
+                }
+            } finally {
+                $chan->close();
+                $client->close();
+            }
+        });
     }
 }
