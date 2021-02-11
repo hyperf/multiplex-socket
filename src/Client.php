@@ -72,6 +72,11 @@ class Client implements ClientInterface, HasSerializerInterface
      */
     protected $config;
 
+    /**
+     * @var ChannelManager
+     */
+    protected $channelManager;
+
     public function __construct(string $name, int $port, ?IdGeneratorInterface $generator = null, ?SerializerInterface $serializer = null, ?PackerInterface $packer = null)
     {
         $this->name = $name;
@@ -79,6 +84,7 @@ class Client implements ClientInterface, HasSerializerInterface
         $this->packer = $packer ?? new Packer();
         $this->generator = $generator ?? new IdGenerator();
         $this->serializer = $serializer ?? new StringSerializer();
+        $this->channelManager = new ChannelManager();
         $this->config = new Collection([
             'package_max_length' => 1024 * 1024 * 2,
             'recv_timeout' => 10,
@@ -119,6 +125,8 @@ class Client implements ClientInterface, HasSerializerInterface
 
     public function recv(int $id)
     {
+        $this->loop();
+
         $manager = $this->getChannelManager();
         $chan = $manager->get($id);
         if ($chan === null) {
@@ -148,7 +156,13 @@ class Client implements ClientInterface, HasSerializerInterface
 
     public function getChannelManager(): ChannelManager
     {
-        return new ChannelManager();
+        return $this->channelManager;
+    }
+
+    public function close(): void
+    {
+        $this->client && $this->client->close();
+        $this->chan && $this->chan->close();
     }
 
     protected function makeClient(): SwooleClient

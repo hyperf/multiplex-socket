@@ -9,6 +9,7 @@ declare(strict_types=1);
  * @contact  group@hyperf.io
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+use Multiplex\Packet;
 use Multiplex\Socket\Server;
 
 require_once __DIR__ . '/../vendor/autoload.php';
