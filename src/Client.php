@@ -199,7 +199,7 @@ class Client implements ClientInterface, HasSerializerInterface
                 $chan = $this->chan;
                 $client = $this->client;
                 while (true) {
-                    $data = $client->recv();
+                    $data = $client->recv(-1);
                     if (! $client->isConnected()) {
                         break;
                     }
