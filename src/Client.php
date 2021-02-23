@@ -182,6 +182,7 @@ class Client implements ClientInterface, HasSerializerInterface
         ]);
         $ret = $client->connect($this->name, $this->port, $this->config->get('connect_timeout', 0.5));
         if ($ret === false) {
+            $this->close();
             throw new ClientConnectFailedException($client->errMsg, $client->errCode);
         }
         return $client;
