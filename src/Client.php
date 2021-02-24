@@ -98,6 +98,7 @@ class Client implements ClientInterface, HasSerializerInterface
     public function set(array $settings)
     {
         $this->config = new Collection($settings);
+        return $this;
     }
 
     public function request($data)
