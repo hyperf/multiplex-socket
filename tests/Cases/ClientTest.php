@@ -11,6 +11,8 @@ declare(strict_types=1);
  */
 namespace HyperfTest\Cases;
 
+use Hyperf\Utils\Reflection\ClassInvoker;
+use Multiplex\Exception\ClientConnectFailedException;
 use Multiplex\Socket\Client;
 
 /**
@@ -38,6 +40,20 @@ class ClientTest extends AbstractTestCase
 
             parallel($callbacks);
             $client->close();
+        });
+    }
+
+    public function testConnectFailed()
+    {
+        $this->runInCoroutine(function () {
+            $client = new Client('127.0.0.1', 9602);
+            try {
+                $ret = $client->request('Hello World.');
+            } catch (ClientConnectFailedException $exception) {
+                $this->assertSame('Connection refused', $exception->getMessage());
+            }
+
+            $this->assertTrue((new ClassInvoker($client))->chan->isClosing());
         });
     }
 }
