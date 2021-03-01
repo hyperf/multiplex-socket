@@ -16,8 +16,8 @@ jobs:
         os: [ ubuntu-latest ]
         php-version: [ '7.3', '7.4' ]
         engine: [ 'swoole' ]
-        swoole-version: [ '4.5.11', '4.6.3' ]
-      max-parallel: 5
+        swoole-version: [ '4.4.19', '4.5.11', '4.6.3' ]
+      max-parallel: 6
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -37,7 +37,7 @@ jobs:
           rm swoole.tar.gz
           cd swoole
           phpize
-          ./configure --enable-openssl --enable-mysqlnd --enable-http2
+          ./configure --enable-openssl --enable-http2
           make -j$(nproc)
           sudo make install
           sudo sh -c "echo extension=swoole > /etc/php/${{ matrix.php-version }}/cli/conf.d/swoole.ini"
