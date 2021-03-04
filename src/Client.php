@@ -209,6 +209,10 @@ class Client implements ClientInterface, HasSerializerInterface
                         break;
                     }
 
+                    if ($data === false || $data === '') {
+                        break;
+                    }
+
                     $packet = $this->packer->unpack($data);
                     if ($channel = $this->getChannelManager()->get($packet->getId())) {
                         $channel->push(
