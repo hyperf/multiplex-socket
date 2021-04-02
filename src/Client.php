@@ -13,6 +13,8 @@ namespace Multiplex\Socket;
 
 use Hyperf\Engine\Channel;
 use Hyperf\Utils\Collection;
+use Hyperf\Utils\Coordinator\Constants;
+use Hyperf\Utils\Coordinator\CoordinatorManager;
 use Hyperf\Utils\Coroutine;
 use Multiplex\ChannelManager;
 use Multiplex\Constract\ClientInterface;
@@ -77,6 +79,11 @@ class Client implements ClientInterface, HasSerializerInterface
      */
     protected $channelManager;
 
+    /**
+     * @var bool
+     */
+    protected $heartbeat = false;
+
     public function __construct(string $name, int $port, ?IdGeneratorInterface $generator = null, ?SerializerInterface $serializer = null, ?PackerInterface $packer = null)
     {
         $this->name = $name;
@@ -89,6 +96,7 @@ class Client implements ClientInterface, HasSerializerInterface
             'package_max_length' => 1024 * 1024 * 2,
             'recv_timeout' => 10,
             'connect_timeout' => 0.5,
+            // 'heartbeat' => null,
         ]);
     }
 
@@ -189,8 +197,34 @@ class Client implements ClientInterface, HasSerializerInterface
         return $client;
     }
 
+    protected function heartbeat(): void
+    {
+        $heartbeat = $this->config->get('heartbeat');
+        if (! $this->heartbeat && is_numeric($heartbeat)) {
+            $this->heartbeat = true;
+
+            Coroutine::create(function () use ($heartbeat) {
+                while (true) {
+                    if (CoordinatorManager::until(Constants::WORKER_EXIT)->yield($heartbeat)) {
+                        break;
+                    }
+
+                    // PING
+                    if ($chan = $this->chan) {
+                        $payload = $this->packer->pack(
+                            new Packet(0, Packet::PING)
+                        );
+                        $chan->push($payload);
+                    }
+                }
+            });
+        }
+    }
+
     protected function loop(): void
     {
+        $this->heartbeat();
+
         if ($this->chan !== null && ! $this->chan->isClosing()) {
             return;
         }
@@ -214,6 +248,10 @@ class Client implements ClientInterface, HasSerializerInterface
                     }
 
                     $packet = $this->packer->unpack($data);
+                    if ($packet->isHeartbeat()) {
+                        continue;
+                    }
+
                     if ($channel = $this->getChannelManager()->get($packet->getId())) {
                         $channel->push(
                             $this->serializer->unserialize($packet->getBody())

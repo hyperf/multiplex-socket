@@ -99,6 +99,12 @@ class Server implements ServerInterface, HasSerializerInterface
 
                 Coroutine::create(function () use ($ret, $conn) {
                     $packet = $this->packer->unpack($ret);
+
+                    if ($packet->isHeartbeat()) {
+                        $conn->send($this->packer->pack(new Packet(0, Packet::PONG)));
+                        return;
+                    }
+
                     $id = $packet->getId();
                     try {
                         $result = $this->handler->__invoke($packet, $this->getSerializer());
