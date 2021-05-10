@@ -30,6 +30,7 @@ use Multiplex\IdGenerator;
 use Multiplex\Packer;
 use Multiplex\Packet;
 use Multiplex\Serializer\StringSerializer;
+use Psr\Log\LoggerInterface;
 use Swoole\Coroutine\Client as SwooleClient;
 
 class Client implements ClientInterface, HasSerializerInterface
@@ -84,6 +85,11 @@ class Client implements ClientInterface, HasSerializerInterface
      */
     protected $heartbeat = false;
 
+    /**
+     * @var null|LoggerInterface
+     */
+    protected $logger;
+
     public function __construct(string $name, int $port, ?IdGeneratorInterface $generator = null, ?SerializerInterface $serializer = null, ?PackerInterface $packer = null)
     {
         $this->name = $name;
@@ -101,11 +107,20 @@ class Client implements ClientInterface, HasSerializerInterface
     }
 
     /**
-     * @return $this
+     * @return static
      */
     public function set(array $settings)
     {
         $this->config = new Collection($settings);
+        return $this;
+    }
+
+    /**
+     * @return static
+     */
+    public function setLogger(?LoggerInterface $logger)
+    {
+        $this->logger = $logger;
         return $this;
     }
 
@@ -209,12 +224,16 @@ class Client implements ClientInterface, HasSerializerInterface
                         break;
                     }
 
-                    // PING
-                    if ($chan = $this->chan) {
-                        $payload = $this->packer->pack(
-                            new Packet(0, Packet::PING)
-                        );
-                        $chan->push($payload);
+                    try {
+                        // PING
+                        if ($chan = $this->chan) {
+                            $payload = $this->packer->pack(
+                                new Packet(0, Packet::PING)
+                            );
+                            $chan->push($payload);
+                        }
+                    } catch (\Throwable $exception) {
+                        $this->logger && $this->logger->error((string) $exception);
                     }
                 }
             });
