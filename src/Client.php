@@ -226,7 +226,7 @@ class Client implements ClientInterface, HasSerializerInterface
 
                     try {
                         // PING
-                        if ($chan = $this->chan) {
+                        if ($chan = $this->chan and $chan->isEmpty()) {
                             $payload = $this->packer->pack(
                                 new Packet(0, Packet::PING)
                             );
