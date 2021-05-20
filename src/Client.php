@@ -282,6 +282,7 @@ class Client implements ClientInterface, HasSerializerInterface
             } finally {
                 $chan->close();
                 $client->close();
+                $this->logger && $this->logger->warning('loop broken, wait to restart in next time.');
             }
         });
 
@@ -307,6 +308,7 @@ class Client implements ClientInterface, HasSerializerInterface
             } finally {
                 $chan->close();
                 $client->close();
+                $this->logger && $this->logger->warning('loop broken, wait to restart in next time.');
             }
         });
     }
