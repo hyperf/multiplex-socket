@@ -250,19 +250,23 @@ class Client implements ClientInterface, HasSerializerInterface
         $this->chan = $this->getChannelManager()->make(65535);
         $this->client = $this->makeClient();
         Coroutine::create(function () {
+            $reason = '';
             try {
                 $chan = $this->chan;
                 $client = $this->client;
                 while (true) {
                     $data = $client->recv(-1);
                     if (! $client->isConnected()) {
+                        $reason = 'client disconnected.' . $client->errMsg;
                         break;
                     }
                     if ($chan->isClosing()) {
+                        $reason = 'channel closed.';
                         break;
                     }
 
                     if ($data === false || $data === '') {
+                        $reason = 'client broken.' . $client->errMsg;
                         break;
                     }
 
@@ -282,20 +286,23 @@ class Client implements ClientInterface, HasSerializerInterface
             } finally {
                 $chan->close();
                 $client->close();
-                $this->logger && $this->logger->warning('loop broken, wait to restart in next time.');
+                $this->logger && $this->logger->warning('Recv loop broken, wait to restart in next time. The reason is ' . $reason);
             }
         });
 
         Coroutine::create(function () {
+            $reason = '';
             try {
                 $chan = $this->chan;
                 $client = $this->client;
                 while (true) {
                     $data = $chan->pop();
                     if ($chan->isClosing()) {
+                        $reason = 'channel closed.';
                         break;
                     }
                     if (! $client->isConnected()) {
+                        $reason = 'client disconnected.' . $client->errMsg;
                         break;
                     }
 
@@ -308,7 +315,7 @@ class Client implements ClientInterface, HasSerializerInterface
             } finally {
                 $chan->close();
                 $client->close();
-                $this->logger && $this->logger->warning('loop broken, wait to restart in next time.');
+                $this->logger && $this->logger->warning('Send loop broken, wait to restart in next time. The reason is ' . $reason);
             }
         });
     }
