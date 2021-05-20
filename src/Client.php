@@ -165,11 +165,11 @@ class Client implements ClientInterface, HasSerializerInterface
         try {
             $data = $chan->pop($this->config->get('recv_timeout', 10));
             if ($chan->isTimeout()) {
-                throw new RecvTimeoutException();
+                throw new RecvTimeoutException(sprintf('Recv channel [%d] pop timeout.', $id));
             }
 
             if ($chan->isClosing()) {
-                throw new ChannelClosedException();
+                throw new ChannelClosedException(sprintf('Recv channel [%d] closed.', $id));
             }
         } finally {
             $manager->close($id);
@@ -275,6 +275,8 @@ class Client implements ClientInterface, HasSerializerInterface
                         $channel->push(
                             $this->serializer->unserialize($packet->getBody())
                         );
+                    } else {
+                        $this->logger && $this->logger->error(sprintf('Recv channel [%d] does not exists.', $packet->getId()));
                     }
                 }
             } finally {
