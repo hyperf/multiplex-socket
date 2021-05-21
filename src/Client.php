@@ -310,7 +310,10 @@ class Client implements ClientInterface, HasSerializerInterface
                         continue;
                     }
 
-                    $client->send($data);
+                    $res = $client->send($data);
+                    if ($res === false) {
+                        $this->logger && $this->logger->warning('Send data failed. The reason is ' . $client->errMsg);
+                    }
                 }
             } finally {
                 $this->logger && $this->logger->warning('Send loop broken, wait to restart in next time. The reason is ' . $reason);
