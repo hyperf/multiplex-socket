@@ -284,9 +284,9 @@ class Client implements ClientInterface, HasSerializerInterface
                     }
                 }
             } finally {
+                $this->logger && $this->logger->warning('Recv loop broken, wait to restart in next time. The reason is ' . $reason);
                 $chan->close();
                 $client->close();
-                $this->logger && $this->logger->warning('Recv loop broken, wait to restart in next time. The reason is ' . $reason);
             }
         });
 
@@ -313,9 +313,9 @@ class Client implements ClientInterface, HasSerializerInterface
                     $client->send($data);
                 }
             } finally {
+                $this->logger && $this->logger->warning('Send loop broken, wait to restart in next time. The reason is ' . $reason);
                 $chan->close();
                 $client->close();
-                $this->logger && $this->logger->warning('Send loop broken, wait to restart in next time. The reason is ' . $reason);
             }
         });
     }
