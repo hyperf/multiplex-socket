@@ -257,7 +257,7 @@ class Client implements ClientInterface, HasSerializerInterface
                 while (true) {
                     $data = $client->recv(-1);
                     if (! $client->isConnected()) {
-                        $reason = 'client disconnected.' . $client->errMsg;
+                        $reason = 'client disconnected. ' . $client->errMsg;
                         break;
                     }
                     if ($chan->isClosing()) {
@@ -266,7 +266,7 @@ class Client implements ClientInterface, HasSerializerInterface
                     }
 
                     if ($data === false || $data === '') {
-                        $reason = 'client broken.' . $client->errMsg;
+                        $reason = 'client broken. ' . $client->errMsg;
                         break;
                     }
 
