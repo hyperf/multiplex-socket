@@ -14,9 +14,11 @@ namespace HyperfTest\Cases;
 use Hyperf\Engine\Channel;
 use Hyperf\Utils\Coordinator\Constants;
 use Hyperf\Utils\Coordinator\CoordinatorManager;
+use Hyperf\Utils\Coroutine;
 use Hyperf\Utils\Reflection\ClassInvoker;
 use Multiplex\Constract\HasHeartbeatInterface;
 use Multiplex\Constract\PackerInterface;
+use Multiplex\Exception\ChannelClosedException;
 use Multiplex\Exception\ClientConnectFailedException;
 use Multiplex\Packer;
 use Multiplex\Packet;
@@ -53,6 +55,25 @@ class ClientTest extends AbstractTestCase
 
             parallel($callbacks);
             $client->close();
+        });
+    }
+
+    public function testRequestWhenChannelClosed()
+    {
+        $this->runInCoroutine(function () {
+            $client = new Client('127.0.0.1', 9601);
+            Coroutine::create(function () use ($client) {
+                sleep(1);
+                $client->close();
+            });
+            try {
+                $client->request('timeout');
+                $this->assertTrue(false);
+            } catch (\Throwable $exception) {
+                $this->assertInstanceOf(ChannelClosedException::class, $exception);
+            } finally {
+                $client->close();
+            }
         });
     }
 

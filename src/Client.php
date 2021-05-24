@@ -190,8 +190,9 @@ class Client implements ClientInterface, HasSerializerInterface
 
     public function close(): void
     {
-        $this->client && $this->client->close();
         $this->chan && $this->chan->close();
+        $this->getChannelManager()->flush();
+        $this->client && $this->client->close();
     }
 
     protected function makeClient(): SwooleClient
@@ -286,6 +287,7 @@ class Client implements ClientInterface, HasSerializerInterface
             } finally {
                 $this->logger && $this->logger->warning('Recv loop broken, wait to restart in next time. The reason is ' . $reason);
                 $chan->close();
+                $this->getChannelManager()->flush();
                 $client->close();
             }
         });
@@ -318,6 +320,7 @@ class Client implements ClientInterface, HasSerializerInterface
             } finally {
                 $this->logger && $this->logger->warning('Send loop broken, wait to restart in next time. The reason is ' . $reason);
                 $chan->close();
+                $this->getChannelManager()->flush();
                 $client->close();
             }
         });
