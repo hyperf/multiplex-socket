@@ -12,10 +12,10 @@ declare(strict_types=1);
 namespace Multiplex\Socket;
 
 use Hyperf\Utils\Collection;
-use Multiplex\Constract\HasSerializerInterface;
-use Multiplex\Constract\PackerInterface;
-use Multiplex\Constract\SerializerInterface;
-use Multiplex\Constract\ServerInterface;
+use Multiplex\Contract\HasSerializerInterface;
+use Multiplex\Contract\PackerInterface;
+use Multiplex\Contract\SerializerInterface;
+use Multiplex\Contract\ServerInterface;
 use Multiplex\Exception\ServerBindFailedException;
 use Multiplex\Exception\ServerStartFailedException;
 use Multiplex\Packer;
@@ -27,15 +27,9 @@ use Swoole\Coroutine\Server\Connection;
 
 class Server implements ServerInterface, HasSerializerInterface
 {
-    /**
-     * @var Packer
-     */
-    protected $packer;
+    protected Packer $packer;
 
-    /**
-     * @var Collection
-     */
-    protected $config;
+    protected SerializerInterface $serializer;
 
     /**
      * @var SwooleServer
@@ -47,18 +41,13 @@ class Server implements ServerInterface, HasSerializerInterface
      */
     protected $handler;
 
-    /**
-     * @var SerializerInterface
-     */
-    protected $serializer;
-
     public function __construct(?SerializerInterface $serializer = null, ?PackerInterface $packer = null)
     {
         $this->packer = $packer ?? new Packer();
         $this->serializer = $serializer ?? new StringSerializer();
     }
 
-    public function bind(string $name, int $port, Collection $config)
+    public function bind(string $name, int $port, array $config)
     {
         if ($this->server) {
             throw new ServerBindFailedException('The server should not be bound more than once.');
@@ -66,7 +55,7 @@ class Server implements ServerInterface, HasSerializerInterface
         $this->server = new SwooleServer($name, $port);
         $this->server->set([
             'open_length_check' => true,
-            'package_max_length' => $config->get('package_max_length', 1024 * 1024 * 2),
+            'package_max_length' => $config['package_max_length'] ?? 1024 * 1024 * 2,
             'package_length_type' => 'N',
             'package_length_offset' => 0,
             'package_body_offset' => 4,

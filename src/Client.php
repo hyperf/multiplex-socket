@@ -12,16 +12,16 @@ declare(strict_types=1);
 namespace Multiplex\Socket;
 
 use Hyperf\Engine\Channel;
-use Hyperf\Utils\Collection;
 use Hyperf\Utils\Coordinator\Constants;
 use Hyperf\Utils\Coordinator\CoordinatorManager;
 use Hyperf\Utils\Coroutine;
 use Multiplex\ChannelManager;
-use Multiplex\Constract\ClientInterface;
-use Multiplex\Constract\HasSerializerInterface;
-use Multiplex\Constract\IdGeneratorInterface;
-use Multiplex\Constract\PackerInterface;
-use Multiplex\Constract\SerializerInterface;
+use Multiplex\Contract\ClientInterface;
+use Multiplex\Contract\HasHeartbeatInterface;
+use Multiplex\Contract\HasSerializerInterface;
+use Multiplex\Contract\IdGeneratorInterface;
+use Multiplex\Contract\PackerInterface;
+use Multiplex\Contract\SerializerInterface;
 use Multiplex\Exception\ChannelClosedException;
 use Multiplex\Exception\ChannelLosedException;
 use Multiplex\Exception\ClientConnectFailedException;
@@ -35,30 +35,11 @@ use Swoole\Coroutine\Client as SwooleClient;
 
 class Client implements ClientInterface, HasSerializerInterface
 {
-    /**
-     * @var string
-     */
-    protected $name;
+    protected Packer $packer;
 
-    /**
-     * @var int
-     */
-    protected $port;
+    protected SerializerInterface $serializer;
 
-    /**
-     * @var Packer
-     */
-    protected $packer;
-
-    /**
-     * @var SerializerInterface
-     */
-    protected $serializer;
-
-    /**
-     * @var IdGeneratorInterface
-     */
-    protected $generator;
+    protected IdGeneratorInterface $generator;
 
     /**
      * @var ?Channel
@@ -70,55 +51,39 @@ class Client implements ClientInterface, HasSerializerInterface
      */
     protected $client;
 
-    /**
-     * @var Collection
-     */
-    protected $config;
+    protected array $config = [
+        'package_max_length' => 1024 * 1024 * 2,
+        'recv_timeout' => 10,
+        'connect_timeout' => 0.5,
+        'heartbeat' => 20,
+    ];
 
-    /**
-     * @var ChannelManager
-     */
-    protected $channelManager;
+    protected ChannelManager $channelManager;
 
-    /**
-     * @var bool
-     */
-    protected $heartbeat = false;
+    protected bool $heartbeat = false;
 
-    /**
-     * @var null|LoggerInterface
-     */
-    protected $logger;
+    protected ?LoggerInterface $logger = null;
 
-    public function __construct(string $name, int $port, ?IdGeneratorInterface $generator = null, ?SerializerInterface $serializer = null, ?PackerInterface $packer = null)
-    {
-        $this->name = $name;
-        $this->port = $port;
+    public function __construct(
+        protected string $name,
+        protected int $port,
+        ?IdGeneratorInterface $generator = null,
+        ?SerializerInterface $serializer = null,
+        ?PackerInterface $packer = null
+    ) {
         $this->packer = $packer ?? new Packer();
         $this->generator = $generator ?? new IdGenerator();
         $this->serializer = $serializer ?? new StringSerializer();
         $this->channelManager = new ChannelManager();
-        $this->config = new Collection([
-            'package_max_length' => 1024 * 1024 * 2,
-            'recv_timeout' => 10,
-            'connect_timeout' => 0.5,
-            // 'heartbeat' => null,
-        ]);
     }
 
-    /**
-     * @return static
-     */
-    public function set(array $settings)
+    public function set(array $settings): static
     {
-        $this->config = new Collection($settings);
+        $this->config = $settings;
         return $this;
     }
 
-    /**
-     * @return static
-     */
-    public function setLogger(?LoggerInterface $logger)
+    public function setLogger(?LoggerInterface $logger): static
     {
         $this->logger = $logger;
         return $this;
@@ -163,7 +128,7 @@ class Client implements ClientInterface, HasSerializerInterface
         }
 
         try {
-            $data = $chan->pop($this->config->get('recv_timeout', 10));
+            $data = $chan->pop($this->config['recv_timeout'] ?? 10);
             if ($chan->isTimeout()) {
                 throw new RecvTimeoutException(sprintf('Recv channel [%d] pop timeout.', $id));
             }
@@ -190,9 +155,9 @@ class Client implements ClientInterface, HasSerializerInterface
 
     public function close(): void
     {
-        $this->chan && $this->chan->close();
+        $this->chan?->close();
         $this->getChannelManager()->flush();
-        $this->client && $this->client->close();
+        $this->client?->close();
     }
 
     protected function makeClient(): SwooleClient
@@ -203,9 +168,9 @@ class Client implements ClientInterface, HasSerializerInterface
             'package_length_type' => 'N',
             'package_length_offset' => 0,
             'package_body_offset' => 4,
-            'package_max_length' => $this->config->get('package_max_length', 1024 * 1024 * 2),
+            'package_max_length' => $this->config['package_max_length'] ?? 1024 * 1024 * 2,
         ]);
-        $ret = $client->connect($this->name, $this->port, $this->config->get('connect_timeout', 0.5));
+        $ret = $client->connect($this->name, $this->port, $this->config['connect_timeout'] ?? 0.5);
         if ($ret === false) {
             $this->close();
             throw new ClientConnectFailedException($client->errMsg, $client->errCode);
@@ -215,7 +180,7 @@ class Client implements ClientInterface, HasSerializerInterface
 
     protected function heartbeat(): void
     {
-        $heartbeat = $this->config->get('heartbeat');
+        $heartbeat = $this->config['heartbeat'] ?? null;
         if (! $this->heartbeat && is_numeric($heartbeat)) {
             $this->heartbeat = true;
 
@@ -229,12 +194,12 @@ class Client implements ClientInterface, HasSerializerInterface
                         // PING
                         if ($chan = $this->chan and $chan->isEmpty()) {
                             $payload = $this->packer->pack(
-                                new Packet(0, Packet::PING)
+                                new Packet(0, HasHeartbeatInterface::PING)
                             );
                             $chan->push($payload);
                         }
                     } catch (\Throwable $exception) {
-                        $this->logger && $this->logger->error((string) $exception);
+                        $this->logger?->error((string) $exception);
                     }
                 }
             });
@@ -281,11 +246,11 @@ class Client implements ClientInterface, HasSerializerInterface
                             $this->serializer->unserialize($packet->getBody())
                         );
                     } else {
-                        $this->logger && $this->logger->error(sprintf('Recv channel [%d] does not exists.', $packet->getId()));
+                        $this->logger?->error(sprintf('Recv channel [%d] does not exists.', $packet->getId()));
                     }
                 }
             } finally {
-                $this->logger && $this->logger->warning('Recv loop broken, wait to restart in next time. The reason is ' . $reason);
+                $this->logger?->warning('Recv loop broken, wait to restart in next time. The reason is ' . $reason);
                 $chan->close();
                 $this->getChannelManager()->flush();
                 $client->close();
