@@ -16,8 +16,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 run(function () {
     $server = new Server();
-    $config = collect([]);
-    $server->bind('0.0.0.0', 9601, $config)->handle(static function (Packet $packet) {
+    $server->bind('0.0.0.0', 9601, [])->handle(static function (Packet $packet) {
         if ($packet->getBody() === 'timeout') {
             sleep(5);
             return 'Hello ' . $packet->getBody();
