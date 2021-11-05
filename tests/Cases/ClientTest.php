@@ -12,8 +12,8 @@ declare(strict_types=1);
 namespace HyperfTest\Cases;
 
 use Hyperf\Engine\Channel;
-use Hyperf\Utils\Coordinator\Constants;
-use Hyperf\Utils\Coordinator\CoordinatorManager;
+use Hyperf\Coordinator\Constants;
+use Hyperf\Coordinator\CoordinatorManager;
 use Hyperf\Utils\Coroutine;
 use Hyperf\Utils\Reflection\ClassInvoker;
 use Multiplex\Contract\HasHeartbeatInterface;
@@ -185,7 +185,6 @@ class ClientTest extends AbstractTestCase
             (new ClassInvoker($client))->loop();
             $packet = $chan->pop(-1);
             $this->assertTrue($packet->isHeartbeat());
-            $client->close();
             CoordinatorManager::until(Constants::WORKER_EXIT)->resume();
             CoordinatorManager::clear(Constants::WORKER_EXIT);
         });
