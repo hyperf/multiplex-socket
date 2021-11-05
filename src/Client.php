@@ -11,10 +11,9 @@ declare(strict_types=1);
  */
 namespace Multiplex\Socket;
 
+use Hyperf\Coordinator\Constants;
+use Hyperf\Coordinator\CoordinatorManager;
 use Hyperf\Engine\Channel;
-use Hyperf\Utils\Coordinator\Constants;
-use Hyperf\Utils\Coordinator\CoordinatorManager;
-use Hyperf\Utils\Coroutine;
 use Multiplex\ChannelManager;
 use Multiplex\Contract\ClientInterface;
 use Multiplex\Contract\HasHeartbeatInterface;
@@ -178,23 +177,27 @@ class Client implements ClientInterface, HasSerializerInterface
         if (! $this->heartbeat && is_numeric($heartbeat)) {
             $this->heartbeat = true;
 
-            Coroutine::create(function () use ($heartbeat) {
-                while (true) {
-                    if (CoordinatorManager::until(Constants::WORKER_EXIT)->yield($heartbeat)) {
-                        break;
-                    }
-
-                    try {
-                        // PING
-                        if ($chan = $this->chan and $chan->isEmpty()) {
-                            $payload = $this->packer->pack(
-                                new Packet(0, HasHeartbeatInterface::PING)
-                            );
-                            $chan->push($payload);
+            go(function () use ($heartbeat) {
+                try {
+                    while (true) {
+                        if (CoordinatorManager::until(Constants::WORKER_EXIT)->yield($heartbeat)) {
+                            break;
                         }
-                    } catch (\Throwable $exception) {
-                        $this->logger?->error((string) $exception);
+
+                        try {
+                            // PING
+                            if ($chan = $this->chan and $chan->isEmpty()) {
+                                $payload = $this->packer->pack(
+                                    new Packet(0, HasHeartbeatInterface::PING)
+                                );
+                                $chan->push($payload);
+                            }
+                        } catch (\Throwable $exception) {
+                            $this->logger?->error((string) $exception);
+                        }
                     }
+                } catch (\Throwable $exception) {
+                    $this->logger?->error((string) $exception);
                 }
             });
         }
@@ -209,7 +212,7 @@ class Client implements ClientInterface, HasSerializerInterface
         }
         $this->chan = $this->getChannelManager()->make(65535);
         $this->client = $this->makeClient();
-        Coroutine::create(function () {
+        go(function () {
             $reason = '';
             try {
                 $chan = $this->chan;
@@ -243,6 +246,8 @@ class Client implements ClientInterface, HasSerializerInterface
                         $this->logger?->error(sprintf('Recv channel [%d] does not exists.', $packet->getId()));
                     }
                 }
+            } catch (\Throwable $exception) {
+                $this->logger?->error((string) $exception);
             } finally {
                 $this->logger?->warning('Recv loop broken, wait to restart in next time. The reason is ' . $reason);
                 $chan->close();
@@ -251,7 +256,7 @@ class Client implements ClientInterface, HasSerializerInterface
             }
         });
 
-        Coroutine::create(function () {
+        go(function () {
             $reason = '';
             try {
                 $chan = $this->chan;
@@ -276,6 +281,8 @@ class Client implements ClientInterface, HasSerializerInterface
                         $this->logger && $this->logger->warning('Send data failed. The reason is ' . $client->errMsg);
                     }
                 }
+            } catch (\Throwable $exception) {
+                $this->logger?->error((string) $exception);
             } finally {
                 $this->logger && $this->logger->warning('Send loop broken, wait to restart in next time. The reason is ' . $reason);
                 $chan->close();

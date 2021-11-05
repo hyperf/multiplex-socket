@@ -20,7 +20,7 @@
     "require": {
         "php": ">=8.0",
         "ext-swoole": ">=4.4",
-        "hyperf/utils": ">=3.0",
+        "hyperf/coordinator": ">=3.0",
         "multiplex/multiplex": "^1.0"
     },
     "require-dev": {
