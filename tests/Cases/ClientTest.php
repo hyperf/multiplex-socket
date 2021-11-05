@@ -40,6 +40,10 @@ class ClientTest extends AbstractTestCase
     {
         $this->runInCoroutine(function () {
             $client = new Client('127.0.0.1', 9601);
+            $client->set([
+                'heartbeat' => null,
+            ]);
+
             $asserts = [
                 'World',
                 'Hyperf',
@@ -49,6 +53,7 @@ class ClientTest extends AbstractTestCase
             foreach ($asserts as $assert) {
                 $callbacks[] = function () use ($client, $assert) {
                     $ret = $client->request($assert);
+
                     $this->assertSame('Hello ' . $assert, $ret);
                 };
             }
@@ -62,6 +67,9 @@ class ClientTest extends AbstractTestCase
     {
         $this->runInCoroutine(function () {
             $client = new Client('127.0.0.1', 9601);
+            $client->set([
+                'heartbeat' => null,
+            ]);
             Coroutine::create(function () use ($client) {
                 sleep(1);
                 $client->close();
@@ -81,6 +89,9 @@ class ClientTest extends AbstractTestCase
     {
         $this->runInCoroutine(function () {
             $client = new Client('127.0.0.1', 9602);
+            $client->set([
+                'heartbeat' => null,
+            ]);
             try {
                 $ret = $client->request('Hello World.');
             } catch (ClientConnectFailedException $exception) {
@@ -107,6 +118,9 @@ class ClientTest extends AbstractTestCase
                 return $packet;
             });
             $client = new Client('127.0.0.1', 9601, null, null, $packer);
+            $client->set([
+                'heartbeat' => null,
+            ]);
             $client->send('xxx');
             $packet = $chan->pop(-1);
             $this->assertInstanceOf(HasHeartbeatInterface::class, $packet);

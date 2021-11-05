@@ -35,21 +35,15 @@ use Swoole\Coroutine\Client as SwooleClient;
 
 class Client implements ClientInterface, HasSerializerInterface
 {
-    protected Packer $packer;
+    protected PackerInterface $packer;
 
     protected SerializerInterface $serializer;
 
     protected IdGeneratorInterface $generator;
 
-    /**
-     * @var ?Channel
-     */
-    protected $chan;
+    protected ?Channel $chan = null;
 
-    /**
-     * @var SwooleClient
-     */
-    protected $client;
+    protected ?SwooleClient $client = null;
 
     protected array $config = [
         'package_max_length' => 1024 * 1024 * 2,

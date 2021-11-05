@@ -11,7 +11,7 @@ declare(strict_types=1);
  */
 namespace Multiplex\Socket;
 
-use Hyperf\Utils\Collection;
+use Multiplex\Contract\HasHeartbeatInterface;
 use Multiplex\Contract\HasSerializerInterface;
 use Multiplex\Contract\PackerInterface;
 use Multiplex\Contract\SerializerInterface;
@@ -90,7 +90,7 @@ class Server implements ServerInterface, HasSerializerInterface
                     $packet = $this->packer->unpack($ret);
 
                     if ($packet->isHeartbeat()) {
-                        $conn->send($this->packer->pack(new Packet(0, Packet::PONG)));
+                        $conn->send($this->packer->pack(new Packet(0, HasHeartbeatInterface::PONG)));
                         return;
                     }
 
