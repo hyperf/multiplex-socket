@@ -102,8 +102,28 @@ class ClientTest extends AbstractTestCase
         });
     }
 
-    public function testRecvTimeout()
+    public function testGetMaxIdleTime()
     {
+        $client = new Client('127.0.0.1', 9602);
+        $client->set([
+            'heartbeat' => 12,
+        ]);
+
+        tap(new ClassInvoker($client), function ($client) {
+            $this->assertSame(12, $client->getHeartbeat());
+            $this->assertSame(24, $client->getMaxIdleTime());
+        });
+
+        $client = new Client('127.0.0.1', 9602);
+        $client->set([
+            'heartbeat' => null,
+        ]);
+
+        tap(new ClassInvoker($client), function ($client) {
+            $this->assertSame(null, $client->getHeartbeat());
+            $this->assertSame(-1, $client->getMaxIdleTime());
+        });
+
         $this->runInCoroutine(function () {
             $client = new class('127.0.0.1', 9601) extends Client {
                 protected function getMaxIdleTime(): int
