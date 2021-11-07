@@ -171,9 +171,24 @@ class Client implements ClientInterface, HasSerializerInterface
         return $client;
     }
 
+    protected function getHeartbeat()
+    {
+        return $this->config['heartbeat'] ?? null;
+    }
+
+    protected function getMaxIdleTime(): int
+    {
+        $heartbeat = $this->getHeartbeat();
+        if (! is_numeric($heartbeat)) {
+            return -1;
+        }
+
+        return (int) ($heartbeat * 2);
+    }
+
     protected function heartbeat(): void
     {
-        $heartbeat = $this->config['heartbeat'] ?? null;
+        $heartbeat = $this->getHeartbeat();
         if (! $this->heartbeat && is_numeric($heartbeat)) {
             $this->heartbeat = true;
 
@@ -196,10 +211,10 @@ class Client implements ClientInterface, HasSerializerInterface
                             $this->logger?->error((string) $exception);
                         }
                     }
-
-                    $this->close();
                 } catch (\Throwable $exception) {
                     $this->logger?->error((string) $exception);
+                } finally {
+                    $this->close();
                 }
             });
         }
@@ -220,11 +235,12 @@ class Client implements ClientInterface, HasSerializerInterface
                 $chan = $this->chan;
                 $client = $this->client;
                 while (true) {
-                    $data = $client->recv(-1);
+                    $data = $client->recv($this->getMaxIdleTime());
                     if (! $client->isConnected()) {
                         $reason = 'client disconnected. ' . $client->errMsg;
                         break;
                     }
+
                     if ($chan->isClosing()) {
                         $reason = 'channel closed.';
                         break;

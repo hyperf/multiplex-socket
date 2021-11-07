@@ -11,9 +11,9 @@ declare(strict_types=1);
  */
 namespace HyperfTest\Cases;
 
-use Hyperf\Engine\Channel;
 use Hyperf\Coordinator\Constants;
 use Hyperf\Coordinator\CoordinatorManager;
+use Hyperf\Engine\Channel;
 use Hyperf\Utils\Coroutine;
 use Hyperf\Utils\Reflection\ClassInvoker;
 use Multiplex\Contract\HasHeartbeatInterface;
@@ -99,6 +99,24 @@ class ClientTest extends AbstractTestCase
             }
 
             $this->assertTrue((new ClassInvoker($client))->chan->isClosing());
+        });
+    }
+
+    public function testRecvTimeout()
+    {
+        $this->runInCoroutine(function () {
+            $client = new class('127.0.0.1', 9601) extends Client {
+                protected function getMaxIdleTime(): int
+                {
+                    return 1;
+                }
+            };
+
+            $ret = $client->request('World.');
+            $this->assertSame('Hello World.', $ret);
+
+            CoordinatorManager::until(Constants::WORKER_EXIT)->resume();
+            CoordinatorManager::clear(Constants::WORKER_EXIT);
         });
     }
 
