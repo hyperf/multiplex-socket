@@ -4,7 +4,7 @@ on:
   push:
   pull_request:
   schedule:
-    - cron:  '0 10 * * *'
+    - cron: '0 10 * * *'
 
 env:
   SWOW_VERSION: 'develop'
@@ -18,9 +18,18 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest ]
-        php-version: [ '8.0' ]
+        php-version: [ '8.0', '8.1' ]
         engine: [ 'swoole' ]
-        swoole-version: [ 'v4.5.11', 'v4.6.7', 'v4.7.1', 'v4.8.1', 'master' ]
+        swoole-version: [ 'v4.5.11', 'v4.6.7', 'v4.7.1', 'v4.8.3', 'master' ]
+        exclude:
+          - php-version: '8.1'
+            swoole-version: 'v4.5.11'
+          - php-version: '8.1'
+            swoole-version: 'v4.6.7'
+          - php-version: '8.1'
+            swoole-version: 'v4.7.1'
+          - php-version: '8.1'
+            swoole-version: 'v4.8.3'
       max-parallel: 6
     steps:
       - name: Checkout
