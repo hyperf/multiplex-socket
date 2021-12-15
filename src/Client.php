@@ -25,12 +25,13 @@ use Multiplex\Exception\ChannelClosedException;
 use Multiplex\Exception\ChannelLosedException;
 use Multiplex\Exception\ClientConnectFailedException;
 use Multiplex\Exception\RecvTimeoutException;
+use Multiplex\Exception\SendFailedException;
 use Multiplex\IdGenerator;
 use Multiplex\Packer;
 use Multiplex\Packet;
 use Multiplex\Serializer\StringSerializer;
 use Psr\Log\LoggerInterface;
-use Swoole\Coroutine\Client as SwooleClient;
+use Swoole\Coroutine\Socket;
 
 class Client implements ClientInterface, HasSerializerInterface
 {
@@ -42,7 +43,7 @@ class Client implements ClientInterface, HasSerializerInterface
 
     protected ?Channel $chan = null;
 
-    protected ?SwooleClient $client = null;
+    protected ?Socket $client = null;
 
     protected array $config = [
         'package_max_length' => 1024 * 1024 * 2,
@@ -153,10 +154,10 @@ class Client implements ClientInterface, HasSerializerInterface
         $this->client?->close();
     }
 
-    protected function makeClient(): SwooleClient
+    protected function makeClient(): Socket
     {
-        $client = new SwooleClient(SWOOLE_SOCK_TCP);
-        $client->set([
+        $client = new Socket(AF_INET, SOCK_STREAM, 0);
+        $client->setProtocol([
             'open_length_check' => true,
             'package_length_type' => 'N',
             'package_length_offset' => 0,
@@ -235,11 +236,7 @@ class Client implements ClientInterface, HasSerializerInterface
                 $chan = $this->chan;
                 $client = $this->client;
                 while (true) {
-                    $data = $client->recv($this->getMaxIdleTime());
-                    if (! $client->isConnected()) {
-                        $reason = 'client disconnected. ' . $client->errMsg;
-                        break;
-                    }
+                    $data = $client->recvPacket($this->getMaxIdleTime());
 
                     if ($chan->isClosing()) {
                         $reason = 'channel closed.';
@@ -285,18 +282,14 @@ class Client implements ClientInterface, HasSerializerInterface
                         $reason = 'channel closed.';
                         break;
                     }
-                    if (! $client->isConnected()) {
-                        $reason = 'client disconnected.' . $client->errMsg;
-                        break;
-                    }
 
                     if (empty($data)) {
                         continue;
                     }
 
-                    $res = $client->send($data);
-                    if ($res === false) {
-                        $this->logger && $this->logger->warning('Send data failed. The reason is ' . $client->errMsg);
+                    $res = $client->sendAll($data, $this->getMaxIdleTime());
+                    if ($res === false || strlen($data) !== $res) {
+                        throw new SendFailedException('Send data failed. The reason is ' . $client->errMsg);
                     }
                 }
             } catch (\Throwable $exception) {
