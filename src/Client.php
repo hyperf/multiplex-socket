@@ -237,6 +237,8 @@ class Client implements ClientInterface, HasSerializerInterface
                         $this->logger && $this->logger->error((string) $exception);
                     }
                 }
+
+                $this->close();
             });
         }
     }
