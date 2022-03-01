@@ -83,12 +83,12 @@ class Client implements ClientInterface, HasSerializerInterface
         return $this;
     }
 
-    public function request($data)
+    public function request(mixed $data): mixed
     {
         return $this->recv($this->send($data));
     }
 
-    public function send($data): int
+    public function send(mixed $data): int
     {
         $this->loop();
 
@@ -111,7 +111,7 @@ class Client implements ClientInterface, HasSerializerInterface
         return $id;
     }
 
-    public function recv(int $id)
+    public function recv(int $id): mixed
     {
         $this->loop();
 

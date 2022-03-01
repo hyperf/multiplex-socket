@@ -47,7 +47,7 @@ class Server implements ServerInterface, HasSerializerInterface
         $this->serializer = $serializer ?? new StringSerializer();
     }
 
-    public function bind(string $name, int $port, array $config)
+    public function bind(string $name, int $port, array $config): static
     {
         if ($this->server) {
             throw new ServerBindFailedException('The server should not be bound more than once.');
@@ -63,7 +63,7 @@ class Server implements ServerInterface, HasSerializerInterface
         return $this;
     }
 
-    public function handle(callable $callable)
+    public function handle(callable $callable): static
     {
         $this->handler = $callable;
         return $this;
