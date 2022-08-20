@@ -22,7 +22,7 @@ use Multiplex\Contract\IdGeneratorInterface;
 use Multiplex\Contract\PackerInterface;
 use Multiplex\Contract\SerializerInterface;
 use Multiplex\Exception\ChannelClosedException;
-use Multiplex\Exception\ChannelLosedException;
+use Multiplex\Exception\ChannelLostException;
 use Multiplex\Exception\ClientConnectFailedException;
 use Multiplex\Exception\RecvTimeoutException;
 use Multiplex\Exception\SendFailedException;
@@ -118,7 +118,7 @@ class Client implements ClientInterface, HasSerializerInterface
         $manager = $this->getChannelManager();
         $chan = $manager->get($id);
         if ($chan === null) {
-            throw new ChannelLosedException();
+            throw new ChannelLostException();
         }
 
         try {
