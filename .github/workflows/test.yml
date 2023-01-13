@@ -20,7 +20,8 @@ jobs:
         os: [ ubuntu-latest ]
         php-version: [ '8.0', '8.1' ]
         engine: [ 'swoole' ]
-        swoole-version: [ 'v4.8.11', 'v5.0.0', 'master' ]
+        swoole-version: [ 'v4.8.11', 'v5.0.1', 'master' ]
+      fail-fast: false
       max-parallel: 6
     steps:
       - name: Checkout
