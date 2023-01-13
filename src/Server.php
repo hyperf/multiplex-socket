@@ -32,15 +32,12 @@ class Server implements ServerInterface, HasSerializerInterface
 
     protected SerializerInterface $serializer;
 
-    /**
-     * @var SwooleServer
-     */
-    protected $server;
+    protected ?SwooleServer $server = null;
 
     /**
      * @var callable
      */
-    protected $handler;
+    protected mixed $handler;
 
     public function __construct(?SerializerInterface $serializer = null, ?PackerInterface $packer = null)
     {
@@ -79,6 +76,9 @@ class Server implements ServerInterface, HasSerializerInterface
     {
         if (! $this->server instanceof SwooleServer) {
             throw new ServerStartFailedException('The server must be bound.');
+        }
+        if (! is_callable($this->handler)) {
+            throw new ServerStartFailedException('The handler must be bound.');
         }
         $this->server->handle(function (Connection $conn) {
             while (true) {

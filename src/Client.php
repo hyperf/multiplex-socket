@@ -14,6 +14,8 @@ namespace Multiplex\Socket;
 use Hyperf\Coordinator\Constants;
 use Hyperf\Coordinator\CoordinatorManager;
 use Hyperf\Engine\Channel;
+use Hyperf\Engine\Exception\SocketConnectException;
+use Hyperf\Engine\Socket;
 use Multiplex\ChannelManager;
 use Multiplex\Contract\ClientInterface;
 use Multiplex\Contract\HasHeartbeatInterface;
@@ -31,7 +33,6 @@ use Multiplex\Packer;
 use Multiplex\Packet;
 use Multiplex\Serializer\StringSerializer;
 use Psr\Log\LoggerInterface;
-use Swoole\Coroutine\Socket;
 use Throwable;
 
 class Client implements ClientInterface, HasSerializerInterface
@@ -59,17 +60,21 @@ class Client implements ClientInterface, HasSerializerInterface
 
     protected ?LoggerInterface $logger = null;
 
+    protected ?Socket\SocketFactory $factory;
+
     public function __construct(
         protected string $name,
         protected int $port,
         ?IdGeneratorInterface $generator = null,
         ?SerializerInterface $serializer = null,
-        ?PackerInterface $packer = null
+        ?PackerInterface $packer = null,
+        ?Socket\SocketFactory $factory = null,
     ) {
         $this->packer = $packer ?? new Packer();
         $this->generator = $generator ?? new IdGenerator();
         $this->serializer = $serializer ?? new StringSerializer();
         $this->channelManager = new ChannelManager();
+        $this->factory = new Socket\SocketFactory();
     }
 
     public function set(array $settings): static
@@ -157,20 +162,23 @@ class Client implements ClientInterface, HasSerializerInterface
 
     protected function makeClient(): Socket
     {
-        $client = new Socket(AF_INET, SOCK_STREAM, 0);
-        $client->setProtocol([
-            'open_length_check' => true,
-            'package_length_type' => 'N',
-            'package_length_offset' => 0,
-            'package_body_offset' => 4,
-            'package_max_length' => $this->config['package_max_length'] ?? 1024 * 1024 * 2,
-        ]);
-        $ret = $client->connect($this->name, $this->port, $this->config['connect_timeout'] ?? 0.5);
-        if ($ret === false) {
+        try {
+            return $this->factory->make(new Socket\SocketOption(
+                $this->name,
+                $this->port,
+                $this->config['connect_timeout'] ?? 0.5,
+                [
+                    'open_length_check' => true,
+                    'package_length_type' => 'N',
+                    'package_length_offset' => 0,
+                    'package_body_offset' => 4,
+                    'package_max_length' => $this->config['package_max_length'] ?? 1024 * 1024 * 2,
+                ]
+            ));
+        } catch (SocketConnectException $exception) {
             $this->close();
-            throw new ClientConnectFailedException($client->errMsg, $client->errCode);
+            throw new ClientConnectFailedException($exception->getMessage(), $exception->getCode());
         }
-        return $client;
     }
 
     protected function getHeartbeat()
