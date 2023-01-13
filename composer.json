@@ -20,7 +20,6 @@
     "require": {
         "php": ">=8.0",
         "ext-sockets": "*",
-        "ext-swoole": ">=4.4",
         "hyperf/coordinator": ">=3.0",
         "multiplex/multiplex": "^1.0"
     },

@@ -24,6 +24,7 @@ use Multiplex\Serializer\StringSerializer;
 use Swoole\Coroutine;
 use Swoole\Coroutine\Server as SwooleServer;
 use Swoole\Coroutine\Server\Connection;
+use Throwable;
 
 class Server implements ServerInterface, HasSerializerInterface
 {
@@ -97,7 +98,7 @@ class Server implements ServerInterface, HasSerializerInterface
                     $id = $packet->getId();
                     try {
                         $result = $this->handler->__invoke($packet, $this->getSerializer());
-                    } catch (\Throwable $exception) {
+                    } catch (Throwable $exception) {
                         $result = $exception;
                     } finally {
                         $conn->send($this->packer->pack(new Packet($id, $this->getSerializer()->serialize($result))));

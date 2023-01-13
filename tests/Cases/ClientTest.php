@@ -16,6 +16,7 @@ use Hyperf\Coordinator\CoordinatorManager;
 use Hyperf\Engine\Channel;
 use Hyperf\Utils\Coroutine;
 use Hyperf\Utils\Reflection\ClassInvoker;
+use Mockery;
 use Multiplex\Contract\HasHeartbeatInterface;
 use Multiplex\Contract\PackerInterface;
 use Multiplex\Exception\ChannelClosedException;
@@ -23,6 +24,7 @@ use Multiplex\Exception\ClientConnectFailedException;
 use Multiplex\Packer;
 use Multiplex\Packet;
 use Multiplex\Socket\Client;
+use Throwable;
 
 /**
  * @internal
@@ -32,7 +34,7 @@ class ClientTest extends AbstractTestCase
 {
     protected function tearDown(): void
     {
-        \Mockery::close();
+        Mockery::close();
         parent::tearDown();
     }
 
@@ -77,7 +79,7 @@ class ClientTest extends AbstractTestCase
             try {
                 $client->request('timeout');
                 $this->assertTrue(false);
-            } catch (\Throwable $exception) {
+            } catch (Throwable $exception) {
                 $this->assertInstanceOf(ChannelClosedException::class, $exception);
             } finally {
                 $client->close();
@@ -143,7 +145,7 @@ class ClientTest extends AbstractTestCase
     public function testSendHeartbeat()
     {
         $this->runInCoroutine(function () {
-            $packer = $packer = \Mockery::mock(PackerInterface::class);
+            $packer = $packer = Mockery::mock(PackerInterface::class);
             $packer->shouldReceive('pack')->withAnyArgs()->andReturnUsing(function () {
                 $packer = new Packer();
                 return $packer->pack(new Packet(0, Packet::PING));
@@ -170,7 +172,7 @@ class ClientTest extends AbstractTestCase
     public function testHeartbeatNullInLoop()
     {
         $this->runInCoroutine(function () {
-            $packer = $packer = \Mockery::mock(PackerInterface::class);
+            $packer = $packer = Mockery::mock(PackerInterface::class);
             $packer->shouldReceive('pack')->withAnyArgs()->andReturnUsing(function ($packet) {
                 $packer = new Packer();
                 return $packer->pack($packet);
@@ -200,7 +202,7 @@ class ClientTest extends AbstractTestCase
     public function testHeartbeatInLoop()
     {
         $this->runInCoroutine(function () {
-            $packer = $packer = \Mockery::mock(PackerInterface::class);
+            $packer = $packer = Mockery::mock(PackerInterface::class);
             $packer->shouldReceive('pack')->withAnyArgs()->andReturnUsing(function ($packet) {
                 $packer = new Packer();
                 return $packer->pack($packet);

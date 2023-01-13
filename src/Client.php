@@ -32,6 +32,7 @@ use Multiplex\Packet;
 use Multiplex\Serializer\StringSerializer;
 use Psr\Log\LoggerInterface;
 use Swoole\Coroutine\Socket;
+use Throwable;
 
 class Client implements ClientInterface, HasSerializerInterface
 {
@@ -103,7 +104,7 @@ class Client implements ClientInterface, HasSerializerInterface
             );
 
             $this->chan->push($payload);
-        } catch (\Throwable $exception) {
+        } catch (Throwable $exception) {
             is_int($id) && $this->getChannelManager()->close($id);
             throw $exception;
         }
@@ -208,11 +209,11 @@ class Client implements ClientInterface, HasSerializerInterface
                                 );
                                 $chan->push($payload);
                             }
-                        } catch (\Throwable $exception) {
+                        } catch (Throwable $exception) {
                             $this->logger?->error((string) $exception);
                         }
                     }
-                } catch (\Throwable $exception) {
+                } catch (Throwable $exception) {
                     $this->logger?->error((string) $exception);
                 } finally {
                     $this->close();
@@ -261,7 +262,7 @@ class Client implements ClientInterface, HasSerializerInterface
                         $this->logger?->error(sprintf('Recv channel [%d] does not exists.', $packet->getId()));
                     }
                 }
-            } catch (\Throwable $exception) {
+            } catch (Throwable $exception) {
                 $this->logger?->error((string) $exception);
             } finally {
                 $this->logger?->warning('Recv loop broken, wait to restart in next time. The reason is ' . $reason);
@@ -292,7 +293,7 @@ class Client implements ClientInterface, HasSerializerInterface
                         throw new SendFailedException('Send data failed. The reason is ' . $client->errMsg);
                     }
                 }
-            } catch (\Throwable $exception) {
+            } catch (Throwable $exception) {
                 $this->logger?->error((string) $exception);
             } finally {
                 $this->logger && $this->logger->warning('Send loop broken, wait to restart in next time. The reason is ' . $reason);
