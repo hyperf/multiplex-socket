@@ -160,12 +160,22 @@ class Client implements ClientInterface, HasSerializerInterface
         $this->client?->close();
     }
 
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
+    public function getPort(): int
+    {
+        return $this->port;
+    }
+
     protected function makeClient(): Socket
     {
         try {
             return $this->factory->make(new Socket\SocketOption(
-                $this->name,
-                $this->port,
+                $this->getName(),
+                $this->getPort(),
                 $this->config['connect_timeout'] ?? 0.5,
                 [
                     'open_length_check' => true,
