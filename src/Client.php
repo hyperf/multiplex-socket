@@ -107,6 +107,22 @@ class Client implements ClientInterface, HasSerializerInterface
     }
 
     /**
+     * @return string
+     */
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
+    /**
+     * @return int
+     */
+    public function getPort(): int
+    {
+        return $this->port;
+    }
+
+    /**
      * @return static
      */
     public function set(array $settings)
@@ -205,7 +221,7 @@ class Client implements ClientInterface, HasSerializerInterface
             'package_body_offset' => 4,
             'package_max_length' => $this->config->get('package_max_length', 1024 * 1024 * 2),
         ]);
-        $ret = $client->connect($this->name, $this->port, $this->config->get('connect_timeout', 0.5));
+        $ret = $client->connect($this->getName(), $this->getPort(), $this->config->get('connect_timeout', 0.5));
         if ($ret === false) {
             $this->close();
             throw new ClientConnectFailedException($client->errMsg, $client->errCode);
