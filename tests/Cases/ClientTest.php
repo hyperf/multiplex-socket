@@ -14,9 +14,9 @@ namespace HyperfTest\Cases;
 
 use Hyperf\Coordinator\Constants;
 use Hyperf\Coordinator\CoordinatorManager;
+use Hyperf\Coroutine\Coroutine;
 use Hyperf\Engine\Channel;
-use Hyperf\Utils\Coroutine;
-use Hyperf\Utils\Reflection\ClassInvoker;
+use Hyperf\Support\Reflection\ClassInvoker;
 use Mockery;
 use Multiplex\Contract\HasHeartbeatInterface;
 use Multiplex\Contract\PackerInterface;
@@ -26,6 +26,9 @@ use Multiplex\Packer;
 use Multiplex\Packet;
 use Multiplex\Socket\Client;
 use Throwable;
+
+use function Hyperf\Coroutine\parallel;
+use function Hyperf\Tappable\tap;
 
 /**
  * @internal
