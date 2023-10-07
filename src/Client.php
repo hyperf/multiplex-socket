@@ -14,6 +14,7 @@ namespace Multiplex\Socket;
 use Hyperf\Coordinator\Constants;
 use Hyperf\Coordinator\CoordinatorManager;
 use Hyperf\Engine\Channel;
+use Hyperf\Engine\Coroutine;
 use Hyperf\Engine\Exception\SocketConnectException;
 use Hyperf\Engine\Socket;
 use Multiplex\ChannelManager;
@@ -212,7 +213,7 @@ class Client implements ClientInterface, HasSerializerInterface
         if (! $this->heartbeat && is_numeric($heartbeat)) {
             $this->heartbeat = true;
 
-            go(function () use ($heartbeat) {
+            Coroutine::create(function () use ($heartbeat) {
                 try {
                     while (true) {
                         if (CoordinatorManager::until(Constants::WORKER_EXIT)->yield($heartbeat)) {
@@ -249,7 +250,7 @@ class Client implements ClientInterface, HasSerializerInterface
         }
         $this->chan = $this->getChannelManager()->make(65535);
         $this->client = $this->makeClient();
-        go(function () {
+        Coroutine::create(function () {
             $reason = '';
             try {
                 $chan = $this->chan;
@@ -290,7 +291,7 @@ class Client implements ClientInterface, HasSerializerInterface
             }
         });
 
-        go(function () {
+        Coroutine::create(function () {
             $reason = '';
             try {
                 $chan = $this->chan;
