@@ -9,12 +9,12 @@ declare(strict_types=1);
  * @contact  group@hyperf.io
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace Multiplex\Socket;
 
 use Hyperf\Coordinator\Constants;
 use Hyperf\Coordinator\CoordinatorManager;
 use Hyperf\Engine\Channel;
-use Hyperf\Engine\Coroutine;
 use Hyperf\Engine\Exception\SocketConnectException;
 use Hyperf\Engine\Socket;
 use Multiplex\ChannelManager;
@@ -35,6 +35,8 @@ use Multiplex\Packet;
 use Multiplex\Serializer\StringSerializer;
 use Psr\Log\LoggerInterface;
 use Throwable;
+
+use function Hyperf\Coroutine\go;
 
 class Client implements ClientInterface, HasSerializerInterface
 {
@@ -213,7 +215,7 @@ class Client implements ClientInterface, HasSerializerInterface
         if (! $this->heartbeat && is_numeric($heartbeat)) {
             $this->heartbeat = true;
 
-            Coroutine::create(function () use ($heartbeat) {
+            go(function () use ($heartbeat) {
                 try {
                     while (true) {
                         if (CoordinatorManager::until(Constants::WORKER_EXIT)->yield($heartbeat)) {
@@ -250,7 +252,7 @@ class Client implements ClientInterface, HasSerializerInterface
         }
         $this->chan = $this->getChannelManager()->make(65535);
         $this->client = $this->makeClient();
-        Coroutine::create(function () {
+        go(function () {
             $reason = '';
             try {
                 $chan = $this->chan;
@@ -291,7 +293,7 @@ class Client implements ClientInterface, HasSerializerInterface
             }
         });
 
-        Coroutine::create(function () {
+        go(function () {
             $reason = '';
             try {
                 $chan = $this->chan;
