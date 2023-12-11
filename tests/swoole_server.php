@@ -14,6 +14,8 @@ use Multiplex\Socket\Server;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
+use function Hyperf\Coroutine\run;
+
 run(function () {
     $server = new Server();
     $server->bind('0.0.0.0', 9601, [])->handle(static function (Packet $packet) {

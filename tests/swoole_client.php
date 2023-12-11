@@ -11,6 +11,9 @@ declare(strict_types=1);
  */
 require_once __DIR__ . '/../vendor/autoload.php';
 
+use function Hyperf\Coroutine\go;
+use function Hyperf\Coroutine\run;
+
 $max = 10000;
 
 run(function () use ($max) {
