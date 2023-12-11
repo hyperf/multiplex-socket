@@ -14,6 +14,8 @@ namespace HyperfTest\Cases;
 
 use PHPUnit\Framework\TestCase;
 
+use function Hyperf\Coroutine\run;
+
 /**
  * Class AbstractTestCase.
  */
