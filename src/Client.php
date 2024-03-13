@@ -131,9 +131,9 @@ class Client implements ClientInterface, HasSerializerInterface
         }
 
         try {
-            $data = $chan->pop($this->config['recv_timeout'] ?? 10);
+            $data = $chan->pop($timeout = $this->config['recv_timeout'] ?? 10);
             if ($chan->isTimeout()) {
-                throw new RecvTimeoutException(sprintf('Recv channel [%d] pop timeout.', $id));
+                throw new RecvTimeoutException(sprintf('Recv channel [%d] pop timeout after %d seconds.', $id, $timeout));
             }
 
             if ($chan->isClosing()) {
