@@ -20,7 +20,7 @@ jobs:
         os: [ ubuntu-latest ]
         php-version: [ '8.0', '8.1', '8.2', '8.3' ]
         engine: [ 'swoole' ]
-        swoole-version: [ 'v4.8.11', 'v5.0.3', 'v5.1.1', 'master' ]
+        swoole-version: [ 'v4.8.11', 'v5.0.3', 'v5.1.2', 'master' ]
         exclude:
           - php-version: '8.2'
             swoole-version: 'v4.8.11'
@@ -32,7 +32,7 @@ jobs:
       max-parallel: 12
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:

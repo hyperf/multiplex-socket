@@ -22,6 +22,7 @@ use Multiplex\Contract\HasHeartbeatInterface;
 use Multiplex\Contract\PackerInterface;
 use Multiplex\Exception\ChannelClosedException;
 use Multiplex\Exception\ClientConnectFailedException;
+use Multiplex\Exception\RecvTimeoutException;
 use Multiplex\Packer;
 use Multiplex\Packet;
 use Multiplex\Socket\Client;
@@ -85,6 +86,26 @@ class ClientTest extends AbstractTestCase
                 $this->assertTrue(false);
             } catch (Throwable $exception) {
                 $this->assertInstanceOf(ChannelClosedException::class, $exception);
+            } finally {
+                $client->close();
+            }
+        });
+    }
+
+    public function testRequestWhenRecvTimeout()
+    {
+        $this->runInCoroutine(function () {
+            $client = new Client('127.0.0.1', 9601);
+            $client->set([
+                'heartbeat' => null,
+                'recv_timeout' => 1,
+            ]);
+            try {
+                $client->request('timeout');
+                $this->assertTrue(false);
+            } catch (Throwable $exception) {
+                $this->assertStringContainsString('pop timeout after 1 seconds', $exception->getMessage());
+                $this->assertInstanceOf(RecvTimeoutException::class, $exception);
             } finally {
                 $client->close();
             }
