@@ -81,7 +81,7 @@ class Client implements ClientInterface, HasSerializerInterface
         $this->generator = $generator ?? new IdGenerator();
         $this->serializer = $serializer ?? new StringSerializer();
         $this->channelManager = new ChannelManager();
-        $this->factory = new Socket\SocketFactory();
+        $this->factory = $factory ?? new Socket\SocketFactory();
     }
 
     public function set(array $settings): static
