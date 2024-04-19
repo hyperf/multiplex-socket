@@ -103,13 +103,16 @@ class Client implements ClientInterface, HasSerializerInterface
 
     public function send(mixed $data): int
     {
-        if (
-            $this->config['max_requests'] > 0
-            && $this->requests >= $this->config['max_requests']
-            && Locker::lock(spl_object_hash($this))
-        ) {
-            $this->close();
-            $this->requests = 0;
+        if ($this->config['max_requests'] > 0 && $this->requests >= $this->config['max_requests']) {
+            $key = spl_object_hash($this);
+            if (Locker::lock($key)) {
+                try {
+                    $this->close();
+                    $this->requests = 0;
+                } finally {
+                    Locker::unlock($key);
+                }
+            }
         }
 
         $this->loop();
