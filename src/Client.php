@@ -108,7 +108,6 @@ class Client implements ClientInterface, HasSerializerInterface
             if (Locker::lock($key)) {
                 try {
                     $this->close();
-                    $this->requests = 0;
                 } finally {
                     Locker::unlock($key);
                 }
@@ -128,8 +127,6 @@ class Client implements ClientInterface, HasSerializerInterface
             );
 
             $this->chan->push($payload);
-
-            ++$this->requests;
         } catch (Throwable $exception) {
             is_int($id) && $this->getChannelManager()->close($id);
             throw $exception;
@@ -179,6 +176,7 @@ class Client implements ClientInterface, HasSerializerInterface
         $this->chan?->close();
         $this->getChannelManager()->flush();
         $this->client?->close();
+        $this->requests = 0;
     }
 
     public function getName(): string
@@ -331,6 +329,8 @@ class Client implements ClientInterface, HasSerializerInterface
                     if ($res === false || strlen($data) !== $res) {
                         throw new SendFailedException('Send data failed. The reason is ' . $client->errMsg);
                     }
+
+                    ++$this->requests;
                 }
             } catch (Throwable $exception) {
                 $this->logger?->error((string) $exception);
