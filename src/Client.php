@@ -104,6 +104,7 @@ class Client implements ClientInterface, HasSerializerInterface
     {
         if ($this->config['max_requests'] > 0 && $this->requests >= $this->config['max_requests']) {
             $this->close();
+            $this->requests = 0;
         }
 
         $this->loop();
