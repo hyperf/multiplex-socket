@@ -14,6 +14,7 @@ namespace Multiplex\Socket;
 
 use Hyperf\Coordinator\Constants;
 use Hyperf\Coordinator\CoordinatorManager;
+use Hyperf\Coroutine\Locker;
 use Hyperf\Engine\Channel;
 use Hyperf\Engine\Exception\SocketConnectException;
 use Hyperf\Engine\Socket;
@@ -50,11 +51,14 @@ class Client implements ClientInterface, HasSerializerInterface
 
     protected ?Socket $client = null;
 
+    protected int $requests = 0;
+
     protected array $config = [
         'package_max_length' => 1024 * 1024 * 2,
         'recv_timeout' => 10,
         'connect_timeout' => 0.5,
         'heartbeat' => 20,
+        'max_requests' => 0,
     ];
 
     protected ChannelManager $channelManager;
@@ -77,12 +81,12 @@ class Client implements ClientInterface, HasSerializerInterface
         $this->generator = $generator ?? new IdGenerator();
         $this->serializer = $serializer ?? new StringSerializer();
         $this->channelManager = new ChannelManager();
-        $this->factory = new Socket\SocketFactory();
+        $this->factory = $factory ?? new Socket\SocketFactory();
     }
 
     public function set(array $settings): static
     {
-        $this->config = $settings;
+        $this->config = array_replace($this->config, $settings);
         return $this;
     }
 
@@ -99,6 +103,17 @@ class Client implements ClientInterface, HasSerializerInterface
 
     public function send(mixed $data): int
     {
+        if ($this->config['max_requests'] > 0 && $this->requests >= $this->config['max_requests']) {
+            $key = spl_object_hash($this);
+            if (Locker::lock($key)) {
+                try {
+                    $this->close();
+                } finally {
+                    Locker::unlock($key);
+                }
+            }
+        }
+
         $this->loop();
 
         $this->getChannelManager()->get($id = $this->generator->generate(), true);
@@ -161,6 +176,7 @@ class Client implements ClientInterface, HasSerializerInterface
         $this->chan?->close();
         $this->getChannelManager()->flush();
         $this->client?->close();
+        $this->requests = 0;
     }
 
     public function getName(): string
@@ -313,6 +329,8 @@ class Client implements ClientInterface, HasSerializerInterface
                     if ($res === false || strlen($data) !== $res) {
                         throw new SendFailedException('Send data failed. The reason is ' . $client->errMsg);
                     }
+
+                    ++$this->requests;
                 }
             } catch (Throwable $exception) {
                 $this->logger?->error((string) $exception);

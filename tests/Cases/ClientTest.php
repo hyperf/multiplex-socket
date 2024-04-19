@@ -112,6 +112,24 @@ class ClientTest extends AbstractTestCase
         });
     }
 
+    public function testSetSettings(): void
+    {
+        $client = new Client('127.0.0.1', 9601);
+        $client->set([
+            'heartbeat' => null,
+            'recv_timeout' => 1,
+            'max_requests' => 100,
+        ]);
+
+        $ref = new ClassInvoker($client);
+
+        $this->assertSame(null, $ref->config['heartbeat']);
+        $this->assertSame(100, $ref->config['max_requests']);
+        $this->assertSame(1, $ref->config['recv_timeout']);
+        $this->assertSame(0.5, $ref->config['connect_timeout']);
+        $this->assertSame(1024 * 1024 * 2, $ref->config['package_max_length']);
+    }
+
     public function testConnectFailed()
     {
         $this->runInCoroutine(function () {
