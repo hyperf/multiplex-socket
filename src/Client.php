@@ -103,7 +103,9 @@ class Client implements ClientInterface, HasSerializerInterface
     public function send(mixed $data): int
     {
         if ($this->config['max_requests'] > 0 && $this->requests >= $this->config['max_requests']) {
-            $this->close();
+            $client = $this->client;
+            $this->client = $this->makeClient();
+            $client->close();
             $this->requests = 0;
         }
 
