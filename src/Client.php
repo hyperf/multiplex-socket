@@ -14,6 +14,7 @@ namespace Multiplex\Socket;
 
 use Hyperf\Coordinator\Constants;
 use Hyperf\Coordinator\CoordinatorManager;
+use Hyperf\Coroutine\Locker;
 use Hyperf\Engine\Channel;
 use Hyperf\Engine\Exception\SocketConnectException;
 use Hyperf\Engine\Socket;
@@ -102,7 +103,11 @@ class Client implements ClientInterface, HasSerializerInterface
 
     public function send(mixed $data): int
     {
-        if ($this->config['max_requests'] > 0 && $this->requests >= $this->config['max_requests']) {
+        if (
+            $this->config['max_requests'] > 0
+            && $this->requests >= $this->config['max_requests']
+            && Locker::lock(spl_object_hash($this))
+        ) {
             $this->close();
             $this->requests = 0;
         }
