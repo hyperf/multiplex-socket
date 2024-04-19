@@ -85,7 +85,7 @@ class Client implements ClientInterface, HasSerializerInterface
 
     public function set(array $settings): static
     {
-        $this->config += $settings;
+        $this->config = array_replace($this->config, $settings);
         return $this;
     }
 
