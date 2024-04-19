@@ -50,11 +50,14 @@ class Client implements ClientInterface, HasSerializerInterface
 
     protected ?Socket $client = null;
 
+    protected int $requests = 0;
+
     protected array $config = [
         'package_max_length' => 1024 * 1024 * 2,
         'recv_timeout' => 10,
         'connect_timeout' => 0.5,
         'heartbeat' => 20,
+        'max_requests' => 0,
     ];
 
     protected ChannelManager $channelManager;
@@ -82,7 +85,7 @@ class Client implements ClientInterface, HasSerializerInterface
 
     public function set(array $settings): static
     {
-        $this->config = $settings;
+        $this->config += $settings;
         return $this;
     }
 
@@ -99,6 +102,10 @@ class Client implements ClientInterface, HasSerializerInterface
 
     public function send(mixed $data): int
     {
+        if ($this->config['max_requests'] > 0 && $this->requests >= $this->config['max_requests']) {
+            $this->close();
+        }
+
         $this->loop();
 
         $this->getChannelManager()->get($id = $this->generator->generate(), true);
@@ -112,6 +119,8 @@ class Client implements ClientInterface, HasSerializerInterface
             );
 
             $this->chan->push($payload);
+
+            ++$this->requests;
         } catch (Throwable $exception) {
             is_int($id) && $this->getChannelManager()->close($id);
             throw $exception;
