@@ -28,6 +28,7 @@ use Multiplex\Packet;
 use Multiplex\Socket\Client;
 use Throwable;
 
+use function Hyperf\Coroutine\go;
 use function Hyperf\Coroutine\parallel;
 use function Hyperf\Tappable\tap;
 
@@ -280,6 +281,32 @@ class ClientTest extends AbstractTestCase
             $chan->close();
 
             $this->assertFalse($chan->push(1));
+        });
+    }
+
+    public function testWaitUntilChannelManagerEmpty()
+    {
+        $this->runInCoroutine(function () {
+            $client = new Client('127.0.0.1', 9999);
+            $client->set([
+                'max_wait_close_seconds' => 0.5,
+            ]);
+            $ref = new ClassInvoker($client);
+            $manager = $client->getChannelManager();
+            $manager->get(1, true);
+            $now = microtime(true);
+            $ref->waitUntilChannelManagerEmpty();
+            $this->assertTrue(microtime(true) - $now > 0.4);
+            $this->assertTrue(microtime(true) - $now < 0.6);
+
+            $now = microtime(true);
+            go(function () use ($manager) {
+                usleep(1000 * 100);
+                $manager->close(1);
+            });
+            $ref->waitUntilChannelManagerEmpty();
+            $this->assertTrue(microtime(true) - $now > 0.08);
+            $this->assertTrue(microtime(true) - $now < 0.2);
         });
     }
 }
