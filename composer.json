@@ -22,7 +22,7 @@
         "ext-sockets": "*",
         "hyperf/coordinator": ">=3.0",
         "hyperf/coroutine": ">=3.0",
-        "multiplex/multiplex": "^1.0"
+        "multiplex/multiplex": "^1.1"
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.0",

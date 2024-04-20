@@ -59,6 +59,7 @@ class Client implements ClientInterface, HasSerializerInterface
         'connect_timeout' => 0.5,
         'heartbeat' => 20,
         'max_requests' => 0,
+        'max_wait_close_seconds' => 2,
     ];
 
     protected ChannelManager $channelManager;
@@ -107,6 +108,7 @@ class Client implements ClientInterface, HasSerializerInterface
             $key = spl_object_hash($this);
             if (Locker::lock($key)) {
                 try {
+                    $this->waitUntilChannelManagerEmpty();
                     $this->close();
                 } finally {
                     Locker::unlock($key);
@@ -341,5 +343,24 @@ class Client implements ClientInterface, HasSerializerInterface
                 $client->close();
             }
         });
+    }
+
+    protected function waitUntilChannelManagerEmpty(): void
+    {
+        $now = microtime(true);
+        $seconds = $this->config['max_wait_close_seconds'];
+        while (true) {
+            if ($this->channelManager->isEmpty()) {
+                return;
+            }
+
+            if (microtime(true) - $now >= $seconds) {
+                return;
+            }
+
+            if (CoordinatorManager::until(Constants::WORKER_EXIT)->yield(0.05)) {
+                return;
+            }
+        }
     }
 }
