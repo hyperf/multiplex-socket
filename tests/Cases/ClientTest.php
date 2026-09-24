@@ -113,6 +113,32 @@ class ClientTest extends AbstractTestCase
         });
     }
 
+    public function testRecvUsesPerCallTimeout()
+    {
+        $this->runInCoroutine(function () {
+            $client = new class('127.0.0.1', 9601) extends Client {
+                protected function loop(): void
+                {
+                }
+            };
+            $client->set([
+                'heartbeat' => null,
+                'recv_timeout' => 10,
+            ]);
+            $client->getChannelManager()->get(1, true);
+
+            try {
+                $client->recv(1, 0.01);
+                $this->assertTrue(false);
+            } catch (Throwable $exception) {
+                $this->assertInstanceOf(RecvTimeoutException::class, $exception);
+                $this->assertStringContainsString('0.01', $exception->getMessage());
+            } finally {
+                $client->close();
+            }
+        });
+    }
+
     public function testSetSettings(): void
     {
         $client = new Client('127.0.0.1', 9601);

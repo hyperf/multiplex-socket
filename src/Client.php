@@ -97,9 +97,9 @@ class Client implements ClientInterface, HasSerializerInterface
         return $this;
     }
 
-    public function request(mixed $data): mixed
+    public function request(mixed $data, ?float $timeout = null): mixed
     {
-        return $this->recv($this->send($data));
+        return $this->recv($this->send($data), $timeout);
     }
 
     public function send(mixed $data): int
@@ -137,7 +137,7 @@ class Client implements ClientInterface, HasSerializerInterface
         return $id;
     }
 
-    public function recv(int $id): mixed
+    public function recv(int $id, ?float $timeout = null): mixed
     {
         $this->loop();
 
@@ -148,9 +148,10 @@ class Client implements ClientInterface, HasSerializerInterface
         }
 
         try {
-            $data = $chan->pop($timeout = $this->config['recv_timeout'] ?? 10);
+            $timeout ??= $this->config['recv_timeout'] ?? 10;
+            $data = $chan->pop($timeout);
             if ($chan->isTimeout()) {
-                throw new RecvTimeoutException(sprintf('Recv channel [%d] pop timeout after %d seconds.', $id, $timeout));
+                throw new RecvTimeoutException(sprintf('Recv channel [%d] pop timeout after %s seconds.', $id, $timeout));
             }
 
             if ($chan->isClosing()) {
